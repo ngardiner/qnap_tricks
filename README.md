@@ -81,3 +81,62 @@ unclean = no
 need_rehash = no
 creating = no
 ```
+
+## How things work
+
+### Caching
+
+SSD Cache is implemented using facebook's ```flashcache```.
+
+```dm-cache``` is used to mount the devices via a cachedev device, which allows caching to be turned on or off for individual Logical Volumes as required.
+
+### Entware
+
+Installing the Entware qpkg allows for additional packages to be installed from the Entware repository using opkg;.
+
+Some useful packages:
+
+```
+opkg install smartmontools
+opkg install zabbix-agentd
+```
+
+### Mounting
+
+#### Internal Storage Volumes
+
+All drives are mounted to a location (the backing mount) such as /share/CACHEDEV7_DATA, as well as to a share directory if a share is created. 
+
+The mount command for both the CACHEDEV mount and the share mounts are the same:
+
+```
+/dev/mapper/cachedev10 /share/CACHEDEV10_DATA ext4 rw,relatime,(null),noacl,stripe=256,data=ordered,jqfmt=vfsv0,usrjquota=aquota.user 0 0
+/dev/mapper/cachedev10 /share/NFSv=4/sharename ext4 rw,relatime,(null),noacl,stripe=256,data=ordered,jqfmt=vfsv0,usrjquota=aquota.user 0 0
+```
+
+However there isn't a 1 to 1 relationship between the CACHEDEV mount and the NFS mounts. Firstly, there can be more than one NFS mount if you have multiple mounts pointing to the same volume, and secondly NFS mounts are **only** created if you are exporting that filesystem via NFS.
+
+Samba shares use the CACHEDEV*n*_DATA mount to share filesystems.
+
+You can determine the mapping of cachedev devices to volumes in the ```/etc/volume.conf``` file.
+
+#### External Storage Volumes
+
+External drives are different. They are mounted first to a mountpoint under /share/external/DEV*xxxx*, and then mounted to an NFS mount if NFS shares are enabled for the external volume.
+
+The numbering appears to start from DEV3301 and increment from there for each disk inserted on my NAS, however others have mounted from 3500, 3600 or even just mounted the device name itself (/share/external/sdk1).
+
+If you need to manually mount an external drive to both an external mountpoint and an NFS mountpoint, you can use the following commands:
+
+```
+mount -t ext4 -o rw,noacl,data=ordered,jqfmt=vfsv0,usrjquota=aquota.user /dev/sdf2 /share/external/DEV3306_2 
+mount -t ext4 -o rw,noacl,data=ordered,jqfmt=vfsv0,usrjquota=aquota.user /dev/sdf2 /share/NFSv=4/sharename 
+```
+
+## Various tools
+
+| Command                 | Arguments   | Purpose                                             |
+| ----------------------- | ----------- | --------------------------------------------------- | 
+| /sbin/get_hd_smartinfo  | -d [Disk #] | Prints the SMART details for the disk in this slot. | 
+| /sbin/getcfg            | TBA         | TBA |
+| /sbin/setcfg            | TBA         | TBA |
