@@ -7,9 +7,13 @@ I bought a TS-653A in July of 2017. By 2020 it is obsolete and out of warranty.
 
 I would not recommend that anyone play with their in-warranty QNAP, however I have considered my purchase to be a giant let-down from day 1, with my future plans being a NAS build to my specs rather than another chassis system.
 
-## /etc/enclosure_x.conf
+## /etc/enclosure_*n*.conf
 
 This appears to be where the Physical enclosure disks are defined.
+
+   * In my system, two enclosures exist. 
+   * Enclosure 0 is the physical drive enclosure, which can hold up to 6 disks.
+   * Enclosure 33 is a generic enclosure ID for all external disks connected to the USB3 ports.
 
 ## /etc/external_vol.conf
 
@@ -127,6 +131,7 @@ External drives are different. They are mounted first to a mountpoint under /sha
 The numbering appears to start from DEV3301 and increment from there for each disk inserted on my NAS, however others have mounted from 3500, 3600 or even just mounted the device name itself (/share/external/sdk1).
 
    * The device name appears to be related to the output of the ```qcli_storage -p``` command, where the WWN detection section of the output shows the RAID Expansion device to be ```REXP#33``` and then lists the drive IDs next to this.
+   * This also aligns with the enclosure_33.conf file which has all of the external disks ever connected to the NAS defined.
 
 If you need to manually mount an external drive to both an external mountpoint and an NFS mountpoint, you can use the following commands:
 
@@ -144,13 +149,13 @@ mount -t ext4 -o rw,noacl,data=ordered,jqfmt=vfsv0,usrjquota=aquota.user /dev/sd
 
 Every internal disk (whether it be a data or SSD cache disk) in the chassis participates in two RAID 1 arrays (md9 and md13). 
 
-md1 is the first configured RAID array containing the storage for the data volumes.
-
-md9 is mounted at ```/mnt/HDA_ROOT``` and contains the configuration and root filesystem for the NAS. ```/etc/config```, which contains a lot of the NAS configuration files, symlinks to a directory under here.
-
-md13 is mounted at ```/mnt/ext``` and is used for the web interface and a lot of external packages such as mariadb, python, samba and so on. This appears to be where apps are installed when you install these from the app center.
-
-md256 is a swap device, as is md322. md322 is apparently only added in some cases, where it is needed. These arrays are raid1 spanned across all data disks, but not SSD cache disks.
+   * md1 is the first configured RAID array containing the storage for the data volumes.
+   * md2 was created when adding an SSD cache to the NAS
+   * md9 is mounted at ```/mnt/HDA_ROOT``` and contains the configuration and root filesystem for the NAS. ```/etc/config```, which contains a lot of the NAS configuration files, symlinks to a directory under here.
+   * md13 is mounted at ```/mnt/ext``` and is used for the web interface and a lot of external packages such as mariadb, python, samba and so on. This appears to be where apps are installed when you install these from the app center.
+   * md256 is a swap device, as is md321 and md322.
+   * md321 is a swap device on the SSD cache drive, and is apparently only added in some cases, where it is needed
+   * md322 is a swap device. These arrays are raid1 spanned across all data disks, but not SSD cache disks.
 
 ## Various tools
 
