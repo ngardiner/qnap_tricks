@@ -126,6 +126,8 @@ External drives are different. They are mounted first to a mountpoint under /sha
 
 The numbering appears to start from DEV3301 and increment from there for each disk inserted on my NAS, however others have mounted from 3500, 3600 or even just mounted the device name itself (/share/external/sdk1).
 
+   * The device name appears to be related to the output of the ```qcli_storage -p``` command, where the WWN detection section of the output shows the RAID Expansion device to be ```REXP#33``` and then lists the drive IDs next to this.
+
 If you need to manually mount an external drive to both an external mountpoint and an NFS mountpoint, you can use the following commands:
 
 ```
@@ -133,10 +135,28 @@ mount -t ext4 -o rw,noacl,data=ordered,jqfmt=vfsv0,usrjquota=aquota.user /dev/sd
 mount -t ext4 -o rw,noacl,data=ordered,jqfmt=vfsv0,usrjquota=aquota.user /dev/sdf2 /share/NFSv=4/sharename 
 ```
 
+   * Can external volumes be LVM Physical Volumes?
+      * The LVM configuration file on the qnap allows only md or drbd devices to be used as LVM physical volumes.
+   * What happens if an external disk is part of a RAID array?
+      * TBA
+
+### RAID
+
+Every internal disk (whether it be a data or SSD cache disk) in the chassis participates in two RAID 1 arrays (md9 and md13). 
+
+md1 is the first configured RAID array containing the storage for the data volumes.
+
+md9 is mounted at ```/mnt/HDA_ROOT``` and contains the configuration and root filesystem for the NAS. ```/etc/config```, which contains a lot of the NAS configuration files, symlinks to a directory under here.
+
+md13 is mounted at ```/mnt/ext``` and is used for the web interface and a lot of external packages such as mariadb, python, samba and so on. This appears to be where apps are installed when you install these from the app center.
+
+md256 is a swap device, as is md322. md322 is apparently only added in some cases, where it is needed. These arrays are raid1 spanned across all data disks, but not SSD cache disks.
+
 ## Various tools
 
 | Command                 | Arguments   | Purpose                                             |
 | ----------------------- | ----------- | --------------------------------------------------- | 
 | /sbin/get_hd_smartinfo  | -d [Disk #] | Prints the SMART details for the disk in this slot. | 
 | /sbin/getcfg            | TBA         | TBA |
+| /sbin/qcli_storage      | -p          | Shows a table of disks attached to the NAS and their status |
 | /sbin/setcfg            | TBA         | TBA |
