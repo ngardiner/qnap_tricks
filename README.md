@@ -101,7 +101,7 @@ Installing the Entware qpkg allows for additional packages to be installed from 
 Some useful packages:
 
 ```
-opkg install smartmontools
+opkg install smartd smartmontools smartmontools-drivedb
 opkg install zabbix-agentd
 ```
 
