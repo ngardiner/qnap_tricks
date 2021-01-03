@@ -94,6 +94,42 @@ SSD Cache is implemented using facebook's ```flashcache```.
 
 ```dm-cache``` is used to mount the devices via a cachedev device, which allows caching to be turned on or off for individual Logical Volumes as required.
 
+#### Cache Flush
+
+For reasons I don't fully understand, the flush of dirty blocks to disk does not seem to work the way you would expect in Read/Write cache mode, and as a result what I believe is unnecessary risk is added to the caching mechanism. This is because dirty page evection **only** seems to occur during cache full events, despite the following settings:
+
+```
+dev.flashcache.CG0.fallow_clean_speed = 2
+dev.flashcache.CG0.fallow_delay = 60
+dev.flashcache.CG0.reclaim_policy = 1
+```
+
+These settings should, as I understand it, clean out dirty blocks using the LRU (least recent used) algorithm after they have not been written to for 1 minute. That said, other controls are available
+
+The first parameter to look at tuning is the percentage of dirty blocks (taken as a percentage of the overall SSD cache size) that may exist on the SSD cache before LRU dirty cache blocks are flushed to disk. By default this is set to:
+
+```
+dev.flashcache.CG0.dirty_low_thresh_pct = 20
+dev.flashcache.CG0.dirty_thresh_pct = 60
+```
+
+Wow! That's a lot. So the default configuration is to allow dirty write blocks to consume up to 60% of the SSD cache. Breaking that down against my objectives we can see that it is not an optimal configuration for me:
+
+   * I have a 1TB SSD cache sitting in front of a RAID 10 array of magnetic NAS disks
+   * The RAID 6 benefits me in read speed but not in write speed, however the capacity of the magnetic disks (24TB in RAID) eclipse the SSD cache (1TB)
+   * What I would like the SSD Cache to do is to intercept writes, 
+   * What I **don't** wan't an SSD cache doing is storing lots of dirty blocks that should be written to a more resilient backing store (in this case, a RAID 6 dual-parity array that can withstand 2 disk failures where my SSD cache cannot).
+   
+So I set the following parameters for what I'd accept as success criteria for the dirty block cache settings:
+
+   * Target as low as possible a dirty cache limit parameter (so that I can easily regularly flush these blocks to disk without significant performance penalty)
+
+Manual flush of the SSD write cache
+
+```
+sysctl -w dev.flashcache.CG0.do_sync=1
+```
+
 ### Entware
 
 Installing the Entware qpkg allows for additional packages to be installed from the Entware repository using opkg;.
