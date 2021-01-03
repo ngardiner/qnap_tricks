@@ -106,6 +106,11 @@ dev.flashcache.CG0.reclaim_policy = 1
 
 These settings should, as I understand it, clean out dirty blocks using the LRU (least recent used) algorithm after they have not been written to for 1 minute. That said, other controls are available to control the caching behaviour, and I have leveraged these settings in my environment. In the past, I was manually flushing cache blocks to disk by disabling all caching for the NAS, which has a significant effect on performance as it will then direct all reads and writes to the same backing array that is being flushed to - causing significant IO bottlenecks.
 
+Somewhat of a giveaway that the 
+```
+fallow_cleanings:       0
+```
+
 The first parameter to look at tuning is the percentage of dirty blocks (taken as a percentage of the overall SSD cache size) that may exist on the SSD cache before LRU dirty cache blocks are flushed to disk. By default this is set to:
 
 ```
@@ -126,6 +131,13 @@ So I set the following parameters for what I'd accept as success criteria for th
    * Ensure that the write cache size is enough to handle sustained write activity by monitoring the write hit rate
    
 Clearly, I don't need 600GB of space to buffer writes for this purpose. The write hit rate averaged 90% prior to reducing the write cache 
+
+On my system, I was able to tune flashcache as low as the following parameters, which in turn improved my average read hit rate, assumedly because there is now more capacity for read caching on the cache disk, while remaining on average >90% for write cache hits.
+
+```
+sysctl -w dev.flashcache.CG0.dirty_low_thresh_pct=8
+sysctl -w dev.flashcache.CG0.dirty_thresh_pct=16
+```
 
 Manual flush of the SSD write cache
 
