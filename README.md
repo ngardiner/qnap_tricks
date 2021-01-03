@@ -3,7 +3,7 @@ A collection of documents to help me understand QNAP internals.
 
 ## Introduction
 
-I bought a TS-653A in July of 2017. By 2020 it is obsolete and out of warranty. 
+I bought a TS-653A in July of 2017. By 2021 it is obsolete and out of warranty. 
 
 I would not recommend that anyone play with their in-warranty QNAP, however I have considered my purchase to be a giant let-down from day 1, with my future plans being a NAS build to my specs rather than another chassis system.
 
@@ -104,7 +104,7 @@ dev.flashcache.CG0.fallow_delay = 60
 dev.flashcache.CG0.reclaim_policy = 1
 ```
 
-These settings should, as I understand it, clean out dirty blocks using the LRU (least recent used) algorithm after they have not been written to for 1 minute. That said, other controls are available
+These settings should, as I understand it, clean out dirty blocks using the LRU (least recent used) algorithm after they have not been written to for 1 minute. That said, other controls are available to control the caching behaviour, and I have leveraged these settings in my environment. In the past, I was manually flushing cache blocks to disk by disabling all caching for the NAS, which has a significant effect on performance as it will then direct all reads and writes to the same backing array that is being flushed to - causing significant IO bottlenecks.
 
 The first parameter to look at tuning is the percentage of dirty blocks (taken as a percentage of the overall SSD cache size) that may exist on the SSD cache before LRU dirty cache blocks are flushed to disk. By default this is set to:
 
@@ -115,14 +115,17 @@ dev.flashcache.CG0.dirty_thresh_pct = 60
 
 Wow! That's a lot. So the default configuration is to allow dirty write blocks to consume up to 60% of the SSD cache. Breaking that down against my objectives we can see that it is not an optimal configuration for me:
 
-   * I have a 1TB SSD cache sitting in front of a RAID 10 array of magnetic NAS disks
-   * The RAID 6 benefits me in read speed but not in write speed, however the capacity of the magnetic disks (24TB in RAID) eclipse the SSD cache (1TB)
-   * What I would like the SSD Cache to do is to intercept writes, 
+   * I have a 1TB SSD cache sitting in front of a RAID 6 array of magnetic NAS disks
+   * The RAID 6 benefits me in read speed but not in write speed, however the capacity of the magnetic disks (24TB in RAID) eclipse the SSD cache (1TB) and stic o I intend to leverage the advantages of each (SSD IOPS and Magnetic Capacity) to do more with my disk array.
+   * What I would like the SSD Cache to do is to intercept random reads and writes, and attempt to service them from the SSD. If the read block is cached, it avoids a read against the backing array which incurs latency. If it is a write, I want to buffer that write for a short period of time in case it is again written to before being committed to disk. This increases IOPS for applications such as databases with indexes which may see repeated updates in a short period of time.
    * What I **don't** wan't an SSD cache doing is storing lots of dirty blocks that should be written to a more resilient backing store (in this case, a RAID 6 dual-parity array that can withstand 2 disk failures where my SSD cache cannot).
    
 So I set the following parameters for what I'd accept as success criteria for the dirty block cache settings:
 
    * Target as low as possible a dirty cache limit parameter (so that I can easily regularly flush these blocks to disk without significant performance penalty)
+   * Ensure that the write cache size is enough to handle sustained write activity by monitoring the write hit rate
+   
+Clearly, I don't need 600GB of space to buffer writes for this purpose. The write hit rate averaged 90% prior to reducing the write cache 
 
 Manual flush of the SSD write cache
 
