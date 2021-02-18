@@ -135,8 +135,8 @@ Clearly, I don't need 600GB of space to buffer writes for this purpose. The writ
 On my system, I was able to tune flashcache as low as the following parameters, which in turn improved my average read hit rate, assumedly because there is now more capacity for read caching on the cache disk, while remaining on average >90% for write cache hits.
 
 ```
-sysctl -w dev.flashcache.CG0.dirty_low_thresh_pct=8
-sysctl -w dev.flashcache.CG0.dirty_thresh_pct=16
+sysctl -w dev.flashcache.CG0.dirty_low_thresh_pct=4
+sysctl -w dev.flashcache.CG0.dirty_thresh_pct=8
 ```
 
 Manual flush of the SSD write cache
